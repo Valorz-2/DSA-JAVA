@@ -1,0 +1,6 @@
+streamlit==1.42.1
+pymongo==4.11.1
+dotenv==1.1.0
+cryptography==44.0.2
+pycryptodome==3.21.0
+bcrypt==4.2.1
