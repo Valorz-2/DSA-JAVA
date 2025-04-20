@@ -98,14 +98,14 @@ Session Security: Streamlit session state ensures secure user sessions without s
 
 ## Project Structure
 secure-password-manager/
-├── app.py                  # Main Streamlit application
-├── PasswordManager.py      # Handles password encryption/decryption with Fernet
-├── PasswordEncryptor.py    # Alternative AES-GCM encryption implementation
-├── PasswordGenerator.py    # Generates strong passwords
-├── DatabaseHandler.py      # Manages MongoDB interactions
-├── .env                    # Environment variables (not tracked)
-├── requirements.txt        # Project dependencies
-└── README.md               # Project documentation
+app.py                  # Main Streamlit application
+PasswordManager.py      # Handles password encryption/decryption with Fernet
+PasswordEncryptor.py    # Alternative AES-GCM encryption implementation
+PasswordGenerator.py    # Generates strong passwords
+DatabaseHandler.py      # Manages MongoDB interactions
+.env                    # Environment variables (not tracked)
+requirements.txt        # Project dependencies
+README.md               # Project documentation
 
 # Requirements
 See requirements.txt for a complete list. Key dependencies include:
