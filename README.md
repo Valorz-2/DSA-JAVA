@@ -35,11 +35,6 @@ Git (optional, for cloning the repository)
 
 # Steps
 
-Clone the Repository:
-git clone https://github.com/your-username/secure-password-manager.git
-cd secure-password-manager
-
-
 Set Up a Virtual Environment (recommended):
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
