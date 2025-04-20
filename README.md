@@ -107,7 +107,7 @@ secure-password-manager/
 ├── requirements.txt        # Project dependencies
 └── README.md               # Project documentation
 
-Requirements
+# Requirements
 See requirements.txt for a complete list. Key dependencies include:
 streamlit
 pymongo
