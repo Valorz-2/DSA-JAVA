@@ -96,7 +96,7 @@ Master Password Hashing: Master passwords are hashed with bcrypt for secure stor
 Secure Key Management: Encryption keys are stored securely and generated only once per installation.
 Session Security: Streamlit session state ensures secure user sessions without storing sensitive data in plaintext.
 
-# Project Structure
+## Project Structure
 secure-password-manager/
 ├── app.py                  # Main Streamlit application
 ├── PasswordManager.py      # Handles password encryption/decryption with Fernet
