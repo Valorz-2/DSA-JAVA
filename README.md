@@ -1,9 +1,10 @@
 # DSA-JAVA
- Secure Password Manager
+# Secure Password Manager
 A robust, secure, and user-friendly password manager built with Python and Streamlit, designed to safely store, manage, and generate strong passwords. This application leverages cryptographic techniques to ensure the security of your sensitive data and integrates with MongoDB for persistent storage.
 Features
 
-Secure Password Storage: Encrypts passwords using the Fernet symmetric encryption (from the cryptography library) and optionally AES-GCM for enhanced security.
+# Secure Password Storage: 
+Encrypts passwords using the Fernet symmetric encryption (from the cryptography library) and optionally AES-GCM for enhanced security.
 User Authentication: Supports user registration and login with securely hashed master passwords using bcrypt.
 Password Generation: Generates strong, customizable passwords with options for length, numbers, and symbols.
 MongoDB Integration: Stores user data and encrypted passwords in a MongoDB database for reliable persistence.
@@ -11,7 +12,7 @@ Streamlit UI: Provides an intuitive web-based interface for easy interaction.
 Password Management: Allows users to add, view, and copy passwords securely with master password verification.
 Session Management: Maintains user sessions using Streamlit's session state for a seamless experience.
 
-Tech Stack
+# Tech Stack
 
 Python: Core programming language.
 Streamlit: For the web-based user interface.
@@ -32,7 +33,7 @@ Python 3.8+
 MongoDB instance (local or cloud, e.g., MongoDB Atlas)
 Git (optional, for cloning the repository)
 
-Steps
+# Steps
 
 Clone the Repository:
 git clone https://github.com/your-username/secure-password-manager.git
@@ -95,7 +96,7 @@ Master Password Hashing: Master passwords are hashed with bcrypt for secure stor
 Secure Key Management: Encryption keys are stored securely and generated only once per installation.
 Session Security: Streamlit session state ensures secure user sessions without storing sensitive data in plaintext.
 
-Project Structure
+# Project Structure
 secure-password-manager/
 ├── app.py                  # Main Streamlit application
 ├── PasswordManager.py      # Handles password encryption/decryption with Fernet
