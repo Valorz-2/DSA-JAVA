@@ -4,7 +4,7 @@ A robust, secure, and user-friendly password manager built with Python and Strea
 Features
 
 # Secure Password Storage: 
-Encrypts passwords using the Fernet symmetric encryption (from the cryptography library) and optionally AES-GCM for enhanced security.
+Encrypts passwords using the AES-256 encryption algorithm for enhanced security.
 User Authentication: Supports user registration and login with securely hashed master passwords using bcrypt.
 Password Generation: Generates strong, customizable passwords with options for length, numbers, and symbols.
 MongoDB Integration: Stores user data and encrypted passwords in a MongoDB database for reliable persistence.
@@ -18,8 +18,7 @@ Python: Core programming language.
 Streamlit: For the web-based user interface.
 MongoDB: Database for storing user data and encrypted passwords.
 Cryptography Libraries:
-cryptography.fernet: For symmetric encryption of passwords.
-pycryptodome: For AES-GCM encryption (optional alternative).
+pycryptodome: For AES-GCM encryption 
 bcrypt: For secure hashing of master passwords.
 
 
@@ -86,7 +85,7 @@ Click the "Logout" button in the sidebar to end your session.
 
 Security Features
 
-Password Encryption: All passwords are encrypted using Fernet (based on AES-128 in CBC mode) or AES-GCM (with scrypt key derivation for enhanced security).
+Password Encryption: All passwords are encrypted using AES-GCM (with scrypt key derivation for enhanced security).
 Master Password Hashing: Master passwords are hashed with bcrypt for secure storage.
 Secure Key Management: Encryption keys are stored securely and generated only once per installation.
 Session Security: Streamlit session state ensures secure user sessions without storing sensitive data in plaintext.
