@@ -3,9 +3,9 @@ import bcrypt
 from PasswordManager import PasswordManager
 from DatabaseHandler import DatabaseHandler
 from PasswordGenerator import PasswordGenerator
-import json
 import base64
 from datetime import datetime
+import pyperclip
 
 # Configure Streamlit page
 st.set_page_config(
@@ -14,9 +14,14 @@ st.set_page_config(
     layout="centered"
 )
 
-# Encode local background image to base64
-with open(r"C:\Users\heman\Documents\DSA Project\backend\c64388745778f06331fd6571e4363935.jpg", "rb") as image_file:
-    encoded_image = base64.b64encode(image_file.read()).decode()
+# Cache the background image to avoid reloading
+@st.cache_data
+def load_background_image():
+    with open(r"C:\Users\heman\Documents\DSA Project\backend\c64388745778f06331fd6571e4363935.jpg", "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode()
+
+# Load background image
+encoded_image = load_background_image()
 
 # Inject custom CSS for animations, background, and text color
 st.markdown(f"""
@@ -28,8 +33,8 @@ st.markdown(f"""
         background-position: center;
         background-repeat: no-repeat;
         background-attachment: fixed;
-        opacity: 0.9; /* Subtle transparency for readability */
-        padding-top: 0px !important; /* Remove top padding to hide default bar */
+        opacity: 0.9;
+        padding-top: 0px !important;
     }}
 
     /* Title animation and glow effect */
@@ -66,20 +71,20 @@ st.markdown(f"""
 
     /* Ensure text remains readable */
     .stTextInput, .stButton, .stTabs, .stSidebar, .stToast, .stSuccess, .stError, .stInfo {{
-        background-color: rgba(255, 255, 255, 0.0); /* Transparent background */
+        background-color: rgba(255, 255, 255, 0.0);
         border-radius: 5px;
         padding: 5px;
     }}
 
     /* Adjust sidebar styling */
     .stSidebar {{
-        background-color: rgba(0, 0, 0, 0.7); /* Dark semi-transparent sidebar */
+        background-color: rgba(0, 0, 0, 0.7);
         color: #ffffff;
     }}
 
     /* Change text color for login and register page elements */
     .stHeader, .stTextInput label, .stButton > button {{
-        color: #32CD32 !important; /* Green color */
+        color: #32CD32 !important;
     }}
 
     /* Change tab text color for Login and Register */
@@ -94,8 +99,13 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
+# Cache DatabaseHandler initialization
+@st.cache_resource
+def init_db_handler():
+    return DatabaseHandler()
+
 # Initialize DatabaseHandler
-db_handler = DatabaseHandler()
+db_handler = init_db_handler()
 
 # Session state initialization
 if "logged_in" not in st.session_state:
@@ -112,25 +122,22 @@ if "master_password_verified" not in st.session_state:
     st.session_state.master_password_verified = False
 if "last_login" not in st.session_state:
     st.session_state.last_login = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+if "passwords_cache" not in st.session_state:
+    st.session_state.passwords_cache = None
 
 # Helper functions
+@st.cache_data(show_spinner=False)
 def login_user(username, master_password):
     user_data = db_handler.load_user(username)
     if user_data and bcrypt.checkpw(master_password.encode('utf-8'), user_data['master_password_hash']):
-        st.session_state.logged_in = True
-        st.session_state.username = username
-        st.session_state.master_password = master_password
-        st.session_state.last_login = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        return True
-    return False
+        return True, user_data
+    return False, None
 
+@st.cache_data(show_spinner=False)
 def register_user(username, master_password):
     if db_handler.load_user(username):
         return False
-
-    # Generate hash separately instead of accessing it from PasswordManager
     master_password_hash = bcrypt.hashpw(master_password.encode('utf-8'), bcrypt.gensalt())
-    password_manager = PasswordManager(master_password)
     db_handler.save_user(username, master_password_hash, {})
     return True
 
@@ -138,20 +145,19 @@ def add_password(username, master_password, service, password):
     password_manager = PasswordManager(master_password)
     encrypted_password = password_manager.encrypt_password(password)
     user_data = db_handler.load_user(username)
-
     if 'passwords' not in user_data:
         user_data['passwords'] = {}
-
     user_data['passwords'][service] = encrypted_password
     db_handler.update_passwords(username, user_data['passwords'])
+    # Invalidate cache
+    st.session_state.passwords_cache = None
 
-def get_passwords(username, master_password):
+@st.cache_data(show_spinner=False)
+def get_passwords(username, master_password, _cache_key):
     password_manager = PasswordManager(master_password)
     user_data = db_handler.load_user(username)
-
     if not user_data or 'passwords' not in user_data:
         return {}
-
     passwords = {}
     for service, encrypted_password in user_data['passwords'].items():
         try:
@@ -171,14 +177,15 @@ def logout():
     st.session_state.master_password = ""
     st.session_state.current_tab = "Login"
     st.session_state.master_password_verified = False
+    st.session_state.passwords_cache = None
 
 def verify_master_password(entered_password):
     user_data = db_handler.load_user(st.session_state.username)
     if user_data and bcrypt.checkpw(entered_password.encode('utf-8'), user_data['master_password_hash']):
-        st.session_state.master_password_verified = True
         return True
     return False
 
+@st.cache_data(show_spinner=False)
 def get_password_count(username):
     user_data = db_handler.load_user(username)
     return len(user_data.get('passwords', {}))
@@ -187,70 +194,73 @@ def get_password_count(username):
 st.markdown('<div class="title">Secure Password Manager</div>', unsafe_allow_html=True)
 
 if not st.session_state.logged_in:
-    # Login/Register tabs
     tab1, tab2 = st.tabs(["Login", "Register"])
 
     with tab1:
         st.header("Login")
-        login_username = st.text_input("Username", key="login_username")
-        login_password = st.text_input("Master Password", type="password", key="login_password")
-        login_button = st.button("Login")
-
-        if login_button:
-            if login_user(login_username, login_password):
-                st.success("Login successful!")
-                st.rerun()
-            else:
-                st.error("Invalid username or password")
+        with st.form("login_form"):
+            login_username = st.text_input("Username", key="login_username")
+            login_password = st.text_input("Master Password", type="password", key="login_password")
+            login_button = st.form_submit_button("Login")
+            if login_button:
+                success, user_data = login_user(login_username, login_password)
+                if success:
+                    st.session_state.logged_in = True
+                    st.session_state.username = login_username
+                    st.session_state.master_password = login_password
+                    st.session_state.last_login = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    st.success("Login successful!")
+                else:
+                    st.error("Invalid username or password")
 
     with tab2:
         st.header("Register")
-        reg_username = st.text_input("Username", key="reg_username")
-        reg_password = st.text_input("Master Password", type="password", key="reg_password")
-        confirm_password = st.text_input("Confirm Master Password", type="password", key="confirm_password")
-        register_button = st.button("Register")
-
-        if register_button:
-            if reg_password != confirm_password:
-                st.error("Passwords do not match")
-            elif not reg_username or not reg_password:
-                st.error("Username and password are required")
-            else:
-                if register_user(reg_username, reg_password):
-                    st.success("Registration successful! Please login.")
-                    st.session_state.current_tab = "Login"
-                    st.rerun()
+        with st.form("register_form"):
+            reg_username = st.text_input("Username", key="reg_username")
+            reg_password = st.text_input("Master Password", type="password", key="reg_password")
+            confirm_password = st.text_input("Confirm Master Password", type="password", key="confirm_password")
+            register_button = st.form_submit_button("Register")
+            if register_button:
+                if reg_password != confirm_password:
+                    st.error("Passwords do not match")
+                elif not reg_username or not reg_password:
+                    st.error("Username and password are required")
                 else:
-                    st.error("Username already exists")
+                    if register_user(reg_username, reg_password):
+                        st.success("Registration successful! Please login.")
+                        st.session_state.current_tab = "Login"
+                    else:
+                        st.error("Username already exists")
 else:
-    # Simplified sidebar with only essential details
     st.sidebar.title(f"Welcome, {st.session_state.username}")
     st.sidebar.write(f"**Last Login:** {st.session_state.last_login}")
     st.sidebar.write(f"**Saved Passwords:** {get_password_count(st.session_state.username)}")
     st.sidebar.button("Logout", on_click=logout)
 
-    # Main tabs for password management
     tab1, tab2, tab3 = st.tabs(["View Passwords", "Add Password", "Generate Password"])
 
     with tab1:
         st.header("Your Passwords")
         if not st.session_state.master_password_verified:
-            master_password_verify = st.text_input("Enter Master Password to View Passwords", type="password",
-                                                  key="master_password_verify")
-            if st.button("Verify Master Password"):
-                if verify_master_password(master_password_verify):
-                    st.success("Master password verified!")
-                    st.session_state.master_password_verified = True
-                    st.rerun()
-                else:
-                    st.error("Incorrect master password")
+            with st.form("verify_form"):
+                master_password_verify = st.text_input("Enter Master Password to View Passwords", type="password", key="master_password_verify")
+                verify_button = st.form_submit_button("Verify Master Password")
+                if verify_button:
+                    if verify_master_password(master_password_verify):
+                        st.session_state.master_password_verified = True
+                        st.success("Master password verified!")
+                    else:
+                        st.error("Incorrect master password")
         else:
-            passwords = get_passwords(st.session_state.username, st.session_state.master_password)
+            # Use cached passwords if available
+            cache_key = f"{st.session_state.username}_{st.session_state.master_password}"
+            if st.session_state.passwords_cache is None:
+                st.session_state.passwords_cache = get_passwords(st.session_state.username, st.session_state.master_password, cache_key)
+            passwords = st.session_state.passwords_cache
 
             if not passwords:
                 st.info("No passwords saved yet. Add some passwords to get started!")
             else:
-                # Initialize session state for popup control
                 if "show_password_popup" not in st.session_state:
                     st.session_state.show_password_popup = False
                 if "current_password" not in st.session_state:
@@ -258,81 +268,65 @@ else:
                 if "current_service" not in st.session_state:
                     st.session_state.current_service = ""
 
-                # Function to show a password popup
                 def show_password(service, pwd):
                     st.session_state.show_password_popup = True
                     st.session_state.current_password = pwd
                     st.session_state.current_service = service
 
-                # Function to close the popup
                 def close_popup():
                     st.session_state.show_password_popup = False
 
-                # Display the popup if active
                 if st.session_state.show_password_popup:
                     with st.container():
                         st.subheader(f"Password for {st.session_state.current_service}")
                         st.write(f"**Service:** {st.session_state.current_service}")
                         st.write(f"**Password:** {st.session_state.current_password}")
                         if st.button("Close", key="close_popup"):
-                            st.session_state.show_password_popup = False
-                            st.rerun()
+                            close_popup()
 
-                # Display the password list
                 for service, password in passwords.items():
                     col1, col2, col3 = st.columns([2, 3, 1])
                     with col1:
                         st.text(service)
                     with col2:
                         st.text("••••••••")
-                        st.button("Show password", key=f"show_{service}", on_click=show_password,
-                                  args=(service, password))
+                        st.button("Show password", key=f"show_{service}", on_click=show_password, args=(service, password))
                     with col3:
                         if st.button("Copy", key=f"copy_{service}"):
-                            st.toast(f"Password for {service} copied to clipboard!")
+                            pyperclip.copy(password)
+                            st.write(f"Password for {service} copied to clipboard!")
 
     with tab2:
         st.header("Add New Password")
-        service = st.text_input("Service/Website", key="new_service")
-
-        # Option to enter password manually or use generated one
-        password_option = st.radio(
-            "Password options",
-            ["Enter manually", "Use generated password"],
-            horizontal=True
-        )
-
-        if password_option == "Enter manually":
-            password = st.text_input("Password", key="new_password", type="password")
-        else:
-            password = st.session_state.generated_password
-            st.text(f"Using: {'•' * len(password)}")
-
-        if st.button("Save Password"):
-            if not service or not password:
-                st.error("Service and password are required")
+        with st.form("add_password_form"):
+            service = st.text_input("Service/Website", key="new_service")
+            password_option = st.radio("Password options", ["Enter manually", "Use generated password"], horizontal=True)
+            if password_option == "Enter manually":
+                password = st.text_input("Password", key="new_password", type="password")
             else:
-                add_password(st.session_state.username, st.session_state.master_password, service, password)
-                st.success(f"Password for {service} saved successfully!")
-                st.session_state.generated_password = ""  # Clear generated password
-                st.rerun()
+                password = st.session_state.generated_password
+                st.text(f"Using: {'•' * len(password)}")
+            save_button = st.form_submit_button("Save Password")
+            if save_button:
+                if not service or not password:
+                    st.error("Service and password are required")
+                else:
+                    add_password(st.session_state.username, st.session_state.master_password, service, password)
+                    st.success(f"Password for {service} saved successfully!")
+                    st.session_state.generated_password = ""
 
     with tab3:
         st.header("Generate Strong Password")
-
         length = st.slider("Password Length", min_value=8, max_value=32, value=16)
-
         col1, col2 = st.columns(2)
         with col1:
             use_numbers = st.checkbox("Include Numbers", value=True)
         with col2:
             use_symbols = st.checkbox("Include Symbols", value=True)
-
         if st.button("Generate Password"):
             generated = generate_password(length, use_numbers, use_symbols)
             st.session_state.generated_password = generated
             st.code(generated, language=None)
             st.success("Password generated! You can use this in the 'Add Password' tab.")
-
         if st.session_state.generated_password and st.button("Copy to Clipboard"):
-            st.toast("Generated password copied to clipboard!")
+            st.write("Generated password copied to clipboard!")
