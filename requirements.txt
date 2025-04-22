@@ -4,3 +4,4 @@ dotenv==1.1.0
 cryptography==44.0.2
 pycryptodome==3.21.0
 bcrypt==4.2.1
+pyperclip==1.9.0
